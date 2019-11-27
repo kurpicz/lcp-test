@@ -1,0 +1,9 @@
+[submodule "extlib/tlx"]
+	path = extlib/tlx
+	url = https://github.com/tlx/tlx.git
+[submodule "extlib/libdivsufsort"]
+	path = extlib/libdivsufsort
+	url = git@github.com:kurpicz/libdivsufsort
+[submodule "extlib/sais-lite-lcp"]
+	path = extlib/sais-lite-lcp
+	url = git@github.com:kurpicz/sais-lite-lcp
