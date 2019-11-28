@@ -23,9 +23,15 @@
 
 #include "divsufsort.h"
 #include "divsufsort64.h"
+#include "sais.h"
 
 #include "lcp_naive.hpp"
 #include "lcp_phi.hpp"
+
+
+#include <unistd.h>
+#include <sys/resource.h>
+#include <stdio.h>
 
 class lcp_benchmark {
 
@@ -35,15 +41,35 @@ public:
       auto const text = load_text(file_path);
 
       timer t;
-
       std::cout << "RESULT algo=";
       if (algorithm_ == "d") {
+
         std::cout << "divsufsort-lcp ";
-        std::cout << "text.size() " << text.size() << std::endl;
         std::vector<int32_t> sa(text.size(), 0);
         std::vector<int32_t> lcp(text.size(), 0);
+        t.reset();
+        divsuflcpsort(text.data(), sa.data(), lcp.data(), text.size());
+        size_t const total_time = t.get_and_reset();
         divsufsort(text.data(), sa.data(), text.size());
+        size_t const sa_time = t.get_and_reset();
+
+        std::cout << "sa_time=" << sa_time << " "
+                  << "lcp_time=" << total_time - sa_time << " "
+                  << "total_time=" << total_time << " "
+                  << "memory=" << getPeakRSS() << " "
+                  << "text_size=" << text.size() << " "
+                  << "file_path=" << file_path << std::endl;
+      } else  if (algorithm_ == "s") {
+
+        std::cout << "sais-lite-lcp ";
+        std::vector<int32_t> sa(text.size(), 0);
+        std::vector<int32_t> lcp(text.size(), 0);
+        t.reset();
+        sais(const_cast<unsigned char*>(text.data()), sa.data(), lcp.data(), text.size());
+        size_t const total_time = t.get_and_reset();
+        std::cout << "total_time=" << total_time;
       } else if (algorithm_ == "n") {
+
         std::cout << "naive ";
         std::vector<int32_t> sa(text.size(), 0);
         t.reset();
@@ -55,6 +81,7 @@ public:
                   << "lcp_time=" << lcp_time << " ";
         
       } else if (algorithm_ == "phi") {
+
         std::cout << "phi ";
         std::vector<int32_t> sa(text.size(), 0);
         t.reset();
@@ -76,6 +103,7 @@ public:
         std::cout << "sa_time=" << sa_time << " "
                   << "lcp_time=" << lcp_time << " ";
       } else if (algorithm_ == "phi2") {
+
         std::cout << "sdsl-phi ";
         sdsl_helper helper(file_path, prefix_size_);
         t.reset();
@@ -87,6 +115,7 @@ public:
         std::cout << "sa_time=" << sa_time << " "
                   << "lcp_time=" << lcp_time << " ";
       } else if (algorithm_ == "sephi") {
+
         std::cout << "sdsl-se-phi ";
         sdsl_helper helper(file_path, prefix_size_);
         t.reset();
@@ -98,6 +127,7 @@ public:
         std::cout << "sa_time=" << sa_time << " "
                   << "lcp_time=" << lcp_time << " ";
       } else if (algorithm_ == "go") {
+
         std::cout << "sdsl-go ";
         sdsl_helper helper(file_path, prefix_size_);
         t.reset();
@@ -112,6 +142,7 @@ public:
                   << "bwt_time=" << bwt_time << " "
                   << "lcp_time=" << lcp_time << " ";
       } else if (algorithm_ == "gophi") {
+
         std::cout << "sdsl-go-phi ";
         sdsl_helper helper(file_path, prefix_size_);
         t.reset();
@@ -126,6 +157,7 @@ public:
                   << "bwt_time=" << bwt_time << " "
                   << "lcp_time=" << lcp_time << " ";
       } else if (algorithm_ == "bwt") {
+
         std::cout << "sdsl-bwt ";
         sdsl_helper helper(file_path, prefix_size_);
         t.reset();
@@ -140,6 +172,7 @@ public:
                   << "bwt_time=" << bwt_time << " "
                   << "lcp_time=" << lcp_time << " ";
       } else if (algorithm_ == "bwt2") {
+
         std::cout << "sdsl-bwt2 ";
         sdsl_helper helper(file_path, prefix_size_);
         t.reset();
@@ -177,6 +210,14 @@ private:
     stream.close();
     result.back() = uint8_t(0);
     return result;
+  }
+
+  // The SDSL overwrites malloc. Therefore, we cannot use malloc_count
+  // for most of these algorithms and we use rusage for all
+  size_t getPeakRSS() {
+    struct rusage rusage;
+    getrusage( RUSAGE_SELF, &rusage);
+    return (size_t)(rusage.ru_maxrss * 1024L);
   }
 
 public:

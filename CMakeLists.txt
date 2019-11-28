@@ -28,6 +28,15 @@ target_include_directories(tlx_command_line PUBLIC
   $<INSTALL_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/extlib/tlx/>
 )
 
+# Add sais-lite-lcp
+add_library(sais_lite_lcp
+  extlib/sais-lite-lcp/sais.c)
+
+target_include_directories(sais_lite_lcp PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/extlib/sais-lite-lcp>
+  $<INSTALL_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/extlib/sais-lite-lcp>
+)
+
 # Add divsufsort-lcp
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "Do not build a shared library for libdivsufsort")
 set(BUILD_EXAMPLES OFF CACHE BOOL "Do not build libdivsufsort example")
