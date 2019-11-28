@@ -13,6 +13,10 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 project (lcp-test)
 
+add_compile_options("-Wall" "-Wextra" "-Werror"
+  "$<$<CONFIG:RELEASE>:-O3>"
+  "$<$<CONFIG:RELEASE>:-funroll-loops>"
+  "$<$<CONFIG:RELEASE>:-march=native>")
 
 # Add TLX command line parser
 add_library(tlx_command_line
