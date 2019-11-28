@@ -15,6 +15,7 @@
 #include <vector>
 
 #include <tlx/cmdline_parser.hpp>
+#include <tlx/math/aggregate.hpp>
 #include <sdsl/construct_lcp.hpp>
 
 
@@ -41,10 +42,11 @@ public:
       auto const text = load_text(file_path);
 
       timer t;
-      std::cout << "RESULT algo=";
-      if (algorithm_ == "d") {
+      tlx::Aggregate<size_t> sa_times;
+      tlx::Aggregate<size_t> lcp_times;
+      tlx::Aggregate<size_t> bwt_times;
 
-        std::cout << "divsufsort-lcp ";
+      auto run_divsufsort_lcp = [&](){
         std::vector<int32_t> sa(text.size(), 0);
         std::vector<int32_t> lcp(text.size(), 0);
         t.reset();
@@ -52,58 +54,46 @@ public:
         size_t const total_time = t.get_and_reset();
         divsufsort(text.data(), sa.data(), text.size());
         size_t const sa_time = t.get_and_reset();
+        sa_times.add(sa_time);
+        lcp_times.add(total_time - sa_time);
+      };
 
-        std::cout << "sa_time=" << sa_time << " "
-                  << "lcp_time=" << total_time - sa_time << " "
-                  << "total_time=" << total_time << " "
-                  << "memory=" << getPeakRSS() << " "
-                  << "text_size=" << text.size() << " "
-                  << "file_path=" << file_path << std::endl;
-      } else  if (algorithm_ == "s") {
-
-        std::cout << "sais-lite-lcp ";
+      auto run_sais_lite_lcp = [&](){
         std::vector<int32_t> sa(text.size(), 0);
         std::vector<int32_t> lcp(text.size(), 0);
         t.reset();
-        saislcp(const_cast<unsigned char*>(text.data()), sa.data(), lcp.data(), text.size());
+        saislcp(const_cast<unsigned char*>(text.data()), sa.data(), lcp.data(),
+                text.size());
         size_t const total_time = t.get_and_reset();
         sais(const_cast<unsigned char*>(text.data()), sa.data(), text.size());
         size_t const sa_time = t.get_and_reset();
-        std::cout << "sa_time=" << sa_time << " "
-                  << "lcp_time=" << total_time - sa_time << " "
-                  << "total_time=" << total_time << " "
-                  << "memory=" << getPeakRSS() << " "
-                  << "text_size=" << text.size() << " "
-                  << "file_path=" << file_path << std::endl;
-      } else if (algorithm_ == "n") {
+        sa_times.add(sa_time);
+        lcp_times.add(total_time - sa_time);
+      };
 
-        std::cout << "naive ";
+      auto run_kasai = [&]() {
         std::vector<int32_t> sa(text.size(), 0);
         t.reset();
         divsufsort(text.data(), sa.data(), text.size());
         size_t const sa_time = t.get_and_reset();
         auto lcp = lcp_naive(text, sa);
         size_t const lcp_time = t.get_and_reset();
-        std::cout << "sa_time=" << sa_time << " "
-                  << "lcp_time=" << lcp_time << " "
-                  << "total_time=" << sa_time + lcp_time << " "
-                  << "memory=" << getPeakRSS() << " "
-                  << "text_size=" << text.size() << " "
-                  << "file_path=" << file_path << std::endl;
-        
-      } else if (algorithm_ == "phi") {
+        sa_times.add(sa_time);
+        lcp_times.add(lcp_time);
+      };
 
-        std::cout << "phi ";
+      auto run_phi = [&](){
         std::vector<int32_t> sa(text.size(), 0);
         t.reset();
         divsufsort(text.data(), sa.data(), text.size());
         size_t const sa_time = t.get_and_reset();
         auto lcp = lcp_phi(text, sa);
         size_t const lcp_time = t.get_and_reset();
-        std::cout << "sa_time=" << sa_time << " "
-                  << "lcp_time=" << lcp_time << " ";
-      } else if (algorithm_ == "k") {
-        std::cout << "sdsl-kasai ";
+        sa_times.add(sa_time);
+        lcp_times.add(lcp_time);
+      };
+
+      auto run_sdsl_kasai = [&](){
         sdsl_helper helper(file_path, prefix_size_);
         t.reset();
         helper.construct_sa();
@@ -111,11 +101,11 @@ public:
         auto config = helper.get_config();
         sdsl::construct_lcp_kasai<8>(config);
         size_t const lcp_time = t.get_and_reset();
-        std::cout << "sa_time=" << sa_time << " "
-                  << "lcp_time=" << lcp_time << " ";
-      } else if (algorithm_ == "phi2") {
+        sa_times.add(sa_time);
+        lcp_times.add(lcp_time);
+      };
 
-        std::cout << "sdsl-phi ";
+      auto run_sdsl_phi = [&](){
         sdsl_helper helper(file_path, prefix_size_);
         t.reset();
         helper.construct_sa();
@@ -123,11 +113,11 @@ public:
         auto config = helper.get_config();
         sdsl::construct_lcp_PHI<8>(config);
         size_t const lcp_time = t.get_and_reset();
-        std::cout << "sa_time=" << sa_time << " "
-                  << "lcp_time=" << lcp_time << " ";
-      } else if (algorithm_ == "sephi") {
+        sa_times.add(sa_time);
+        lcp_times.add(lcp_time);
+      };
 
-        std::cout << "sdsl-se-phi ";
+      auto run_sdsl_se_phi = [&](){
         sdsl_helper helper(file_path, prefix_size_);
         t.reset();
         helper.construct_sa();
@@ -135,11 +125,11 @@ public:
         auto config = helper.get_config();
         sdsl::construct_lcp_semi_extern_PHI(config);
         size_t const lcp_time = t.get_and_reset();
-        std::cout << "sa_time=" << sa_time << " "
-                  << "lcp_time=" << lcp_time << " ";
-      } else if (algorithm_ == "go") {
+        sa_times.add(sa_time);
+        lcp_times.add(lcp_time);
+      };
 
-        std::cout << "sdsl-go ";
+      auto run_sdsl_go = [&](){
         sdsl_helper helper(file_path, prefix_size_);
         t.reset();
         helper.construct_sa();
@@ -149,12 +139,12 @@ public:
         auto config = helper.get_config();
         sdsl::construct_lcp_go(config);
         size_t const lcp_time = t.get_and_reset();
-        std::cout << "sa_time=" << sa_time << " "
-                  << "bwt_time=" << bwt_time << " "
-                  << "lcp_time=" << lcp_time << " ";
-      } else if (algorithm_ == "gophi") {
+        sa_times.add(sa_time);
+        bwt_times.add(bwt_time);
+        lcp_times.add(lcp_time);
+      };
 
-        std::cout << "sdsl-go-phi ";
+       auto run_sdsl_go_phi = [&](){
         sdsl_helper helper(file_path, prefix_size_);
         t.reset();
         helper.construct_sa();
@@ -164,12 +154,27 @@ public:
         auto config = helper.get_config();
         sdsl::construct_lcp_goPHI(config);
         size_t const lcp_time = t.get_and_reset();
-        std::cout << "sa_time=" << sa_time << " "
-                  << "bwt_time=" << bwt_time << " "
-                  << "lcp_time=" << lcp_time << " ";
-      } else if (algorithm_ == "bwt") {
+        sa_times.add(sa_time);
+        bwt_times.add(bwt_time);
+        lcp_times.add(lcp_time);
+      };
 
-        std::cout << "sdsl-bwt ";
+      auto run_sdsl_bwt_based = [&](){
+        sdsl_helper helper(file_path, prefix_size_);
+        t.reset();
+        helper.construct_sa();
+        size_t const sa_time = t.get_and_reset();
+        helper.construct_bwt();
+        size_t const bwt_time = t.get_and_reset();
+        auto config = helper.get_config();
+        sdsl::construct_lcp_bwt_based(config);
+        size_t const lcp_time = t.get_and_reset();
+        sa_times.add(sa_time);
+        bwt_times.add(bwt_time);
+        lcp_times.add(lcp_time);
+      };
+
+      auto run_sdsl_bwt_based2 = [&](){
         sdsl_helper helper(file_path, prefix_size_);
         t.reset();
         helper.construct_sa();
@@ -179,25 +184,32 @@ public:
         auto config = helper.get_config();
         sdsl::construct_lcp_bwt_based2(config);
         size_t const lcp_time = t.get_and_reset();
-        std::cout << "sa_time=" << sa_time << " "
-                  << "bwt_time=" << bwt_time << " "
-                  << "lcp_time=" << lcp_time << " ";
-      } else if (algorithm_ == "bwt2") {
+        sa_times.add(sa_time);
+        bwt_times.add(bwt_time);
+        lcp_times.add(lcp_time);
+      };
 
-        std::cout << "sdsl-bwt2 ";
-        sdsl_helper helper(file_path, prefix_size_);
-        t.reset();
-        helper.construct_sa();
-        size_t const sa_time = t.get_and_reset();
-        helper.construct_bwt();
-        size_t const bwt_time = t.get_and_reset();
-        auto config = helper.get_config();
-        sdsl::construct_lcp_bwt_based2(config);
-        size_t const lcp_time = t.get_and_reset();
-        std::cout << "sa_time=" << sa_time << " "
-                  << "bwt_time=" << bwt_time << " "
-                  << "lcp_time=" << lcp_time << " ";
+      std::cout << "RESULT algo=" << algorithm_ << " ";
+      for (size_t i = 0; i < runs_; ++i) {
+        if (algorithm_ == "divsufsort_lcp") { run_divsufsort_lcp(); }
+        else if (algorithm_ == "sais_lite_lcp") { run_sais_lite_lcp(); }
+        else if (algorithm_ == "kasai") { run_kasai(); }
+        else if (algorithm_ == "phi") { run_phi(); }
+        else if (algorithm_ == "kasai_sdsl") { run_sdsl_kasai(); }
+        else if (algorithm_ == "phi_sdsl") { run_sdsl_phi(); }
+        else if (algorithm_ == "sephi") { run_sdsl_se_phi(); }
+        else if (algorithm_ == "go") { run_sdsl_go(); }
+        else if (algorithm_ == "gophi") { run_sdsl_go_phi(); }
+        else if (algorithm_ == "bwt") { run_sdsl_bwt_based(); }
+        else if (algorithm_ == "bwt2") { run_sdsl_bwt_based2(); }
       }
+
+      std::cout << "sa_time=" << sa_times.average() << " "
+                << "lcp_time=" << lcp_times.average() << " "
+                << "bwt_time=" << bwt_times.average() << " "
+                << "memory=" << getPeakRSS() << " "
+                << "text_size=" << text.size() << " "
+                << "file_path=" << file_path << std::endl;
     }
   }
 
@@ -250,7 +262,7 @@ int32_t main(int32_t argc, char* const argv[]) {
   cp.add_bytes('s', "size", benchmark.prefix_size_,
                "Optional size of prefix of inputs that should be considered");
   cp.add_size_t('r', "runs", benchmark.runs_,
-                "Number of runs that the mean running time is returned for.");
+                "Number of runs that average running time is measured for.");
   cp.add_string('a', "algorithm", benchmark.algorithm_,
                 "The algorithm that is used to construct the LCP array. "
                 "Available are: "
