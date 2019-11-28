@@ -65,9 +65,16 @@ public:
         std::vector<int32_t> sa(text.size(), 0);
         std::vector<int32_t> lcp(text.size(), 0);
         t.reset();
-        sais(const_cast<unsigned char*>(text.data()), sa.data(), lcp.data(), text.size());
+        saislcp(const_cast<unsigned char*>(text.data()), sa.data(), lcp.data(), text.size());
         size_t const total_time = t.get_and_reset();
-        std::cout << "total_time=" << total_time;
+        sais(const_cast<unsigned char*>(text.data()), sa.data(), text.size());
+        size_t const sa_time = t.get_and_reset();
+        std::cout << "sa_time=" << sa_time << " "
+                  << "lcp_time=" << total_time - sa_time << " "
+                  << "total_time=" << total_time << " "
+                  << "memory=" << getPeakRSS() << " "
+                  << "text_size=" << text.size() << " "
+                  << "file_path=" << file_path << std::endl;
       } else if (algorithm_ == "n") {
 
         std::cout << "naive ";
@@ -78,7 +85,11 @@ public:
         auto lcp = lcp_naive(text, sa);
         size_t const lcp_time = t.get_and_reset();
         std::cout << "sa_time=" << sa_time << " "
-                  << "lcp_time=" << lcp_time << " ";
+                  << "lcp_time=" << lcp_time << " "
+                  << "total_time=" << sa_time + lcp_time << " "
+                  << "memory=" << getPeakRSS() << " "
+                  << "text_size=" << text.size() << " "
+                  << "file_path=" << file_path << std::endl;
         
       } else if (algorithm_ == "phi") {
 
@@ -223,6 +234,7 @@ private:
 public:
   std::vector<std::string> file_paths_;
   uint64_t prefix_size_ = 0;
+  size_t runs_ = 5;
   std::string algorithm_;
 }; // class lcp_benchmark
 
@@ -237,6 +249,8 @@ int32_t main(int32_t argc, char* const argv[]) {
                     "Path(s) to the input files.");
   cp.add_bytes('s', "size", benchmark.prefix_size_,
                "Optional size of prefix of inputs that should be considered");
+  cp.add_size_t('r', "runs", benchmark.runs_,
+                "Number of runs that the mean running time is returned for.");
   cp.add_string('a', "algorithm", benchmark.algorithm_,
                 "The algorithm that is used to construct the LCP array. "
                 "Available are: "
