@@ -209,7 +209,8 @@ public:
                 << "bwt_time=" << bwt_times.average() << " "
                 << "memory=" << getPeakRSS() << " "
                 << "text_size=" << text.size() << " "
-                << "file_path=" << file_path << std::endl;
+                << "file_path=" << file_path <<  " "
+	        << "runs=" << runs_ << std::endl;
     }
   }
 

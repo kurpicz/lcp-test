@@ -39,14 +39,11 @@ target_include_directories(sais_lite_lcp PUBLIC
 )
 
 # Add divsufsort-lcp
-set(BUILD_SHARED_LIBS OFF CACHE BOOL "Do not build a shared library for libdivsufsort")
-set(BUILD_EXAMPLES OFF CACHE BOOL "Do not build libdivsufsort example")
-set(BUILD_DIVSUFSORT64 OFF CACHE BOOL "Build libdivsufsort in 64-bits mode")
-add_subdirectory(extlib/libdivsufsort)
+# add_subdirectory(extlib/libdivsufsort)
+link_directories($ENV{HOME}/lib)
 
 # SDSL is required (because we compare with lots of LCP algorithms only available there)
 find_package(SDSL REQUIRED)
-
 add_subdirectory(src)
 
 ################################################################################
