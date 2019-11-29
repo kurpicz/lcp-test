@@ -23,9 +23,11 @@ public:
 
   sdsl_helper(std::string const& file_path, uint64_t const prefix_size = 0) {
     namespace fs = std::filesystem;
-    fs::create_directories(UNIQUE_FOLDER_NAME);
+    folder_name_ = std::string(UNIQUE_FOLDER_NAME) + "_" +
+      std::to_string(std::rand());
+    fs::create_directories(folder_name_);
     fs::path src_path(file_path);
-    std::string const dst_file_path = std::string(UNIQUE_FOLDER_NAME) + "/" +
+    std::string const dst_file_path = folder_name_ + "/" +
       std::string(UNIQUE_FILE_NAME);
     fs::path dst_path(dst_file_path);
     fs::copy(src_path, dst_path);
@@ -40,7 +42,7 @@ public:
   }
 
   ~sdsl_helper() {
-    std::filesystem::remove_all(UNIQUE_FOLDER_NAME);
+    std::filesystem::remove_all(folder_name_);
   }
 
   void construct_sa() {
@@ -56,6 +58,7 @@ public:
   }
 
 private:
+  std::string folder_name_;
   sdsl::cache_config config_;
   sdsl::int_vector<8> text_;
   sdsl::int_vector<> sa_;
