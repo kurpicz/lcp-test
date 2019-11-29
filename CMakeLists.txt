@@ -7,13 +7,14 @@
 ################################################################################
 
 cmake_minimum_required(VERSION 3.14.0 FATAL_ERROR)
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/misc/cmake")
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 project (lcp-test)
 
-add_compile_options("-Wall" "-Wextra" "-Werror"
+add_compile_options("-Wall" "-Wextra" "-Wpedantic"
   "$<$<CONFIG:RELEASE>:-O3>"
   "$<$<CONFIG:RELEASE>:-funroll-loops>"
   "$<$<CONFIG:RELEASE>:-march=native>")
@@ -42,6 +43,9 @@ set(BUILD_SHARED_LIBS OFF CACHE BOOL "Do not build a shared library for libdivsu
 set(BUILD_EXAMPLES OFF CACHE BOOL "Do not build libdivsufsort example")
 set(BUILD_DIVSUFSORT64 OFF CACHE BOOL "Build libdivsufsort in 64-bits mode")
 add_subdirectory(extlib/libdivsufsort)
+
+# SDSL is required (because we compare with lots of LCP algorithms only available there)
+find_package(SDSL REQUIRED)
 
 add_subdirectory(src)
 

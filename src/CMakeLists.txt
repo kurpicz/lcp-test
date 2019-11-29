@@ -8,8 +8,9 @@
 
 add_executable(benchmark benchmark.cpp)
 target_link_libraries(benchmark
-  stdc++fs tlx_command_line divsufsort divsufsort64 sais_lite_lcp sdsl)
+  stdc++fs tlx_command_line divsufsort divsufsort64 sais_lite_lcp ${SDSL})
 target_include_directories(benchmark PUBLIC
+  ${SDSL_INCLUDE_DIRS}
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include/>
   $<INSTALL_INTERFACE:${PROJECT_SOURCE_DIR}/include/>
 )
